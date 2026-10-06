@@ -1,0 +1,43 @@
+name: Daily Football Stats Update
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libgbm1 libasound2 libxkbcommon0 libdrm2 \
+            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgtk-3-0 libpangocairo-1.0-0 libcairo2 libatspi2.0-0
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install soccerdata==1.9.1
+
+      - name: Run updater (saison active uniquement, fail-soft)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ACTIVE_SEASON: "2025-2026"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python scripts/updater.py
